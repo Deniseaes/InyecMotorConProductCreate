@@ -17,5 +17,11 @@ public interface ApiService {
     Call<Producto> editarProducto(@Body Producto producto);
     @POST("/producto/crear")  // <-- Añadir esta línea
     Call<ProductoCreate> crearProducto(@Body ProductoCreate nuevoProducto);
+
+    @GET("/tipo/all")
+    Call<List<TipoDTO>> getTipos(); // Define el nuevo endpoint para obtener las tipos
+
+    @GET("/proveedor/all")
+    Call<List<ProveedorDTO>> getProveedores(); // Define el nuevo endpoint para obtener las tipos
 }
 

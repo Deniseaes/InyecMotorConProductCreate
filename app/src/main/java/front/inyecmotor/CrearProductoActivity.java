@@ -1,6 +1,6 @@
 package front.inyecmotor;
 
-import android.annotation.SuppressLint;
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -8,9 +8,12 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -20,9 +23,16 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class CrearProductoActivity extends AppCompatActivity {
     private EditText etCodigo, etNombre, etPrecioCosto, etPrecioVenta, etStockActual, etStockMax, etStockMin;
-    private Button btnCrearProducto;
-
-    private static final String BASE_URL = "http://192.168.0.103:8080"; // Cambia a la URL de tu servidor
+    private Button btnCrearProducto,  btnSelectTipo, btnRegresarCrearProduct, btnSelectProveedor;
+    //son los que nos traemos en la llamada al fetch son todos los all
+    private List<Tipo> tipos;
+    private List<Proveedor>proveedores;
+    //son los que se seleccionaron
+    private boolean[] selectedTipos;
+    private boolean[] selectedProveedores;
+    private List<Tipo> selectedProductTipos;
+    private List<Proveedor> selectedProductProveedores;
+    private static final String BASE_URL = "http://192.168.1.3:8080"; // Cambia a la URL de tu servidor
     private ApiService apiService;
 
 
@@ -39,6 +49,17 @@ public class CrearProductoActivity extends AppCompatActivity {
         etStockMax = findViewById(R.id.etStockMax);
         etStockMin = findViewById(R.id.etStockMin);
         btnCrearProducto = findViewById(R.id.btnCrearProducto);
+        btnSelectTipo = findViewById(R.id.btnSelectTipo);
+        btnRegresarCrearProduct = findViewById(R.id.btnRegresarCrearProduct);
+        btnSelectProveedor = findViewById(R.id.btnSelectProveedor);
+
+        tipos = new LinkedList<Tipo>();
+        selectedTipos = new boolean[tipos.size()];
+        selectedProductTipos = new ArrayList<Tipo>();
+        proveedores = new LinkedList<Proveedor>();
+        selectedProveedores = new boolean[proveedores.size()];
+        selectedProductProveedores = new ArrayList<Proveedor>();
+
 
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(BASE_URL)
@@ -46,12 +67,44 @@ public class CrearProductoActivity extends AppCompatActivity {
                 .build();
         apiService = retrofit.create(ApiService.class);
 
+        // Obtener tipos de productos al crear la vista
+        fetchProductTipos();
+        //Obtener los proveedores tambien
+        fetchProductProveedores();
+
+        btnSelectTipo.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showMultiSelectDialogTipos();
+            }
+        });
+
+        btnSelectProveedor.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showMultiSelectDialogProveedores();
+            }
+        });
+
         btnCrearProducto.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 crearProducto();
             }
         });
+
+        btnRegresarCrearProduct.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                atrasClick(v);
+            }
+        });
+    }
+
+    // Método para manejar el clic del botón de regresar
+    public void atrasClick(View view) {
+        // Esto hará que la actividad actual termine y vuelva a la anterior en la pila
+        finish();
     }
 
     private void crearProducto() {
@@ -62,16 +115,24 @@ public class CrearProductoActivity extends AppCompatActivity {
         int stockActual = Integer.parseInt(etStockActual.getText().toString());
         int stockMax = Integer.parseInt(etStockMax.getText().toString());
         int stockMin = Integer.parseInt(etStockMin.getText().toString());
-        ArrayList <Integer> proveedores = new ArrayList<>();
-        proveedores.add(2);
+
         ArrayList <Integer> modelos = new ArrayList<>();
         modelos.add(2);
         ArrayList <Integer> marcas = new ArrayList<>();
         marcas.add(2);
-        ArrayList <Integer> tipos = new ArrayList<>();
-        tipos.add(2);
-        Long id = new Long(99999);
-        ProductoCreate nuevoProducto = new ProductoCreate(id, codigo, nombre,stockMin, stockMax,stockActual , precioVenta, precioCosto,proveedores,tipos,marcas,modelos);
+        // Aquí puedes ajustar cómo se envían los proveedores seleccionados al backend
+        ArrayList <Integer> proveedoresIds = new ArrayList<>();
+        for (Proveedor proveedor : selectedProductProveedores) {
+            proveedoresIds.add(proveedor.getId());
+        }
+        // Aquí puedes ajustar cómo se envían los tipos seleccionados al backend
+        ArrayList<Integer> tipoIds = new ArrayList<>();
+        for (Tipo tipo : selectedProductTipos) {
+            tipoIds.add(tipo.getId());
+        }
+
+        Long id = Long.valueOf(99999);
+        ProductoCreate nuevoProducto = new ProductoCreate(id, codigo, nombre,stockMin, stockMax,stockActual , precioVenta, precioCosto,proveedoresIds,tipoIds,marcas,modelos);
 
 
         Call<ProductoCreate> call = apiService.crearProducto(nuevoProducto);
@@ -79,19 +140,150 @@ public class CrearProductoActivity extends AppCompatActivity {
             @Override
             public void onResponse(Call<ProductoCreate> call, Response<ProductoCreate> response) {
                 if (response.isSuccessful()) {
-                    Toast.makeText(CrearProductoActivity.this, "Producto creado exitosamente", Toast.LENGTH_SHORT).show();
-                    Log.e("Error", "Error: " + response.toString());
+                    Toast.makeText(CrearProductoActivity.this, "Producto creado exitosamente", Toast.LENGTH_LONG).show();
+                    Log.i("respuesta", response.toString());
                     finish();
 
                 } else {
-                    Toast.makeText(CrearProductoActivity.this, "Error al crear el producto", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(CrearProductoActivity.this, "Error al crear el producto", Toast.LENGTH_LONG).show();
+                    Log.i("respuesta no", response.toString());
                 }
             }
 
             @Override
             public void onFailure(Call<ProductoCreate> call, Throwable t) {
                 Toast.makeText(CrearProductoActivity.this, "Error de conexión", Toast.LENGTH_SHORT).show();
+                Log.e("Error de la llamada", "Error: " + t);
             }
         });
     }
+
+    private void fetchProductTipos() {
+        Call<List<TipoDTO>> call = apiService.getTipos();
+        call.enqueue(new Callback<List<TipoDTO>>() {
+            @Override
+            public void onResponse(Call<List<TipoDTO>> call, Response<List<TipoDTO>> response) {
+                if (response.isSuccessful()) {
+                    List<TipoDTO> tipoDtoList = response.body();
+                    tipoDtoList.forEach(tipoDto -> {
+                        Tipo newTipo =tipoDto.toTipo();
+                        tipos.add(newTipo);});
+
+                    selectedTipos = new boolean[tipos.size()];
+                } else {
+                    Toast.makeText(CrearProductoActivity.this, "Failed to fetch product types", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<TipoDTO>> call, Throwable t) {
+                Toast.makeText(CrearProductoActivity.this, "Failed to fetch product types", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void showMultiSelectDialogTipos() {
+
+        String[] tipoNames = new String[tipos.size()];
+        for (int i = 0; i < tipos.size(); i++) {
+            tipoNames[i] = tipos.get(i).getNombre();
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Selecciona los tipos de producto")
+                .setMultiChoiceItems(tipoNames, selectedTipos, new DialogInterface.OnMultiChoiceClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which, boolean isChecked) {
+                        selectedTipos[which] = isChecked;
+                    }
+                })
+                .setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        // Implementa la lógica después de seleccionar los tipos y hacer clic en Aceptar
+                        // Puedes recorrer selectedTipos para obtener los tipos seleccionados
+                        selectedProductTipos.clear(); // Limpiar la lista de tipos seleccionados antes de agregar los nuevos
+                        for (int i = 0; i < selectedTipos.length; i++) {
+                            if (selectedTipos[i]) {
+                                selectedProductTipos.add(tipos.get(i));
+                            }
+                        }
+                        // Actualiza la interfaz de usuario si es necesario
+                    }
+                })
+                .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        // Acción al hacer clic en Cancelar, si es necesario
+                    }
+                });
+        AlertDialog dialog = builder.create();
+        dialog.show();
+
+    }
+
+    private void fetchProductProveedores() {
+        Call<List<ProveedorDTO>> call = apiService.getProveedores();
+        call.enqueue(new Callback<List<ProveedorDTO>>() {
+            @Override
+            public void onResponse(Call<List<ProveedorDTO>> call, Response<List<ProveedorDTO>> response) {
+                if (response.isSuccessful()) {
+                    List<ProveedorDTO> proveedoresDtoList = response.body();
+                    proveedoresDtoList.forEach(proveedorDto -> {
+                        Proveedor newProveedor =proveedorDto.toProveedor();
+                        proveedores.add(newProveedor);});
+
+                    selectedProveedores = new boolean[proveedores.size()];
+                } else {
+                    Toast.makeText(CrearProductoActivity.this, "Failed to fetch prodcuts proveedores", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<ProveedorDTO>> call, Throwable t) {
+                Toast.makeText(CrearProductoActivity.this, "Failed to fetch prodcuts proveedores", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void showMultiSelectDialogProveedores() {
+
+        String[] tipoNames = new String[proveedores.size()];
+        for (int i = 0; i < proveedores.size(); i++) {
+            tipoNames[i] = proveedores.get(i).getNombre();
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Selecciona el/los proveedores del producto")
+                .setMultiChoiceItems(tipoNames, selectedProveedores, new DialogInterface.OnMultiChoiceClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which, boolean isChecked) {
+                        selectedProveedores[which] = isChecked;
+                    }
+                })
+                .setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        // Implementa la lógica después de seleccionar los tipos y hacer clic en Aceptar
+                        // Puedes recorrer selectedProveedores para obtener los tipos seleccionados
+                        selectedProductProveedores.clear(); // Limpiar la lista de tipos seleccionados antes de agregar los nuevos
+                        for (int i = 0; i < selectedProveedores.length; i++) {
+                            if (selectedProveedores[i]) {
+                                selectedProductProveedores.add(proveedores.get(i));
+                            }
+                        }
+                        // Actualiza la interfaz de usuario si es necesario
+                    }
+                })
+                .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        // Acción al hacer clic en Cancelar, si es necesario
+                    }
+                });
+        AlertDialog dialog = builder.create();
+        dialog.show();
+
+    }
+
 }

@@ -55,8 +55,30 @@
         android:inputType="number" />
 
     <Button
+        android:id="@+id/btnSelectTipo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Tipos" />
+
+    <Button
+        android:id="@+id/btnSelectProveedor"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Proveedores" />
+
+    <Button
         android:id="@+id/btnCrearProducto"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Crear Producto" />
+
+    <Button
+        android:id="@+id/btnRegresarCrearProduct"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Atrás"
+        android:layout_gravity="bottom|start"
+        android:layout_marginStart="16dp"
+        android:layout_marginBottom="16dp"
+        android:onClick="atrasClick"/>
 </LinearLayout>
