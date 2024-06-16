@@ -23,16 +23,24 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class CrearProductoActivity extends AppCompatActivity {
     private EditText etCodigo, etNombre, etPrecioCosto, etPrecioVenta, etStockActual, etStockMax, etStockMin;
-    private Button btnCrearProducto,  btnSelectTipo, btnRegresarCrearProduct, btnSelectProveedor;
+    private Button btnCrearProducto,  btnSelectTipo, btnRegresarCrearProduct, btnSelectProveedor, btnSelectMarcas, btnSelectModelos;
     //son los que nos traemos en la llamada al fetch son todos los all
     private List<Tipo> tipos;
     private List<Proveedor>proveedores;
+
+    private List<Marca> marcas;
+    private List<Modelo> modelos
+            ;
     //son los que se seleccionaron
     private boolean[] selectedTipos;
     private boolean[] selectedProveedores;
+    private boolean[] selectedMarcas;
+    private boolean[] selectedModelos;
     private List<Tipo> selectedProductTipos;
     private List<Proveedor> selectedProductProveedores;
-    private static final String BASE_URL = "http://192.168.1.3:8080"; // Cambia a la URL de tu servidor
+    private List<Marca> selectedProductMarcas;
+    private List<Modelo> selectedProductModelos;
+    private static final String BASE_URL = "http://192.168.0.106:8080"; // Cambia a la URL de tu servidor
     private ApiService apiService;
 
 
@@ -52,13 +60,25 @@ public class CrearProductoActivity extends AppCompatActivity {
         btnSelectTipo = findViewById(R.id.btnSelectTipo);
         btnRegresarCrearProduct = findViewById(R.id.btnRegresarCrearProduct);
         btnSelectProveedor = findViewById(R.id.btnSelectProveedor);
+        btnSelectMarcas = findViewById(R.id.btnSelectMarcas);
+        btnSelectModelos = findViewById(R.id.btnSelectModelos);
+
 
         tipos = new LinkedList<Tipo>();
         selectedTipos = new boolean[tipos.size()];
         selectedProductTipos = new ArrayList<Tipo>();
+
         proveedores = new LinkedList<Proveedor>();
         selectedProveedores = new boolean[proveedores.size()];
         selectedProductProveedores = new ArrayList<Proveedor>();
+
+        marcas = new LinkedList<Marca>();
+        selectedMarcas = new boolean[marcas.size()];
+        selectedProductMarcas = new ArrayList<Marca>();
+
+        modelos = new LinkedList<Modelo>();
+        selectedModelos = new boolean[modelos.size()];
+        selectedProductModelos = new ArrayList<Modelo>();
 
 
         Retrofit retrofit = new Retrofit.Builder()
@@ -71,6 +91,11 @@ public class CrearProductoActivity extends AppCompatActivity {
         fetchProductTipos();
         //Obtener los proveedores tambien
         fetchProductProveedores();
+        //Obtener los Marcas tambien
+        fetchProductMarcas();
+        //Obtener los Modelos tambien
+        fetchProductModelos();
+
 
         btnSelectTipo.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -83,6 +108,20 @@ public class CrearProductoActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 showMultiSelectDialogProveedores();
+            }
+        });
+
+        btnSelectMarcas.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showMultiSelectDialogMarcas();
+            }
+        });
+
+        btnSelectModelos.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showMultiSelectDialogModelos();
             }
         });
 
@@ -116,10 +155,16 @@ public class CrearProductoActivity extends AppCompatActivity {
         int stockMax = Integer.parseInt(etStockMax.getText().toString());
         int stockMin = Integer.parseInt(etStockMin.getText().toString());
 
-        ArrayList <Integer> modelos = new ArrayList<>();
-        modelos.add(2);
-        ArrayList <Integer> marcas = new ArrayList<>();
-        marcas.add(2);
+        // Aquí puedes ajustar cómo se envían los modelos seleccionados al backend
+        ArrayList <Integer> modelosIds = new ArrayList<>();
+        for (Modelo modelo : selectedProductModelos) {
+            modelosIds.add(modelo.getId());
+        }
+        // Aquí puedes ajustar cómo se envían los marcas seleccionados al backend
+        ArrayList <Integer> marcasIds = new ArrayList<>();
+        for (Marca marca : selectedProductMarcas) {
+            marcasIds.add(marca.getId());
+        }
         // Aquí puedes ajustar cómo se envían los proveedores seleccionados al backend
         ArrayList <Integer> proveedoresIds = new ArrayList<>();
         for (Proveedor proveedor : selectedProductProveedores) {
@@ -131,8 +176,10 @@ public class CrearProductoActivity extends AppCompatActivity {
             tipoIds.add(tipo.getId());
         }
 
+
+
         Long id = Long.valueOf(99999);
-        ProductoCreate nuevoProducto = new ProductoCreate(id, codigo, nombre,stockMin, stockMax,stockActual , precioVenta, precioCosto,proveedoresIds,tipoIds,marcas,modelos);
+        ProductoCreate nuevoProducto = new ProductoCreate(id, codigo, nombre,stockMin, stockMax,stockActual , precioVenta, precioCosto,proveedoresIds,tipoIds,marcasIds,modelosIds);
 
 
         Call<ProductoCreate> call = apiService.crearProducto(nuevoProducto);
@@ -246,6 +293,7 @@ public class CrearProductoActivity extends AppCompatActivity {
         });
     }
 
+    //proveedores
     private void showMultiSelectDialogProveedores() {
 
         String[] tipoNames = new String[proveedores.size()];
@@ -270,6 +318,136 @@ public class CrearProductoActivity extends AppCompatActivity {
                         for (int i = 0; i < selectedProveedores.length; i++) {
                             if (selectedProveedores[i]) {
                                 selectedProductProveedores.add(proveedores.get(i));
+                            }
+                        }
+                        // Actualiza la interfaz de usuario si es necesario
+                    }
+                })
+                .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        // Acción al hacer clic en Cancelar, si es necesario
+                    }
+                });
+        AlertDialog dialog = builder.create();
+        dialog.show();
+
+    }
+
+    //Marcas
+    private void fetchProductMarcas() {
+        Call<List<MarcaDTO>> call = apiService.getMarcas();
+        call.enqueue(new Callback<List<MarcaDTO>>() {
+            @Override
+            public void onResponse(Call<List<MarcaDTO>> call, Response<List<MarcaDTO>> response) {
+                if (response.isSuccessful()) {
+                    List<MarcaDTO> marcaDtoList = response.body();
+                    marcaDtoList.forEach(marcaDto -> {
+                        Marca newMarca =marcaDto.toMarca();
+                        marcas.add(newMarca);});
+
+                    selectedMarcas = new boolean[marcas.size()];
+                } else {
+                    Toast.makeText(CrearProductoActivity.this, "Failed to fetch product on response", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<MarcaDTO>> call, Throwable t) {
+                Toast.makeText(CrearProductoActivity.this, "Failed to fetch product marcas", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void showMultiSelectDialogMarcas() {
+
+        String[] marcaNames = new String[marcas.size()];
+        for (int i = 0; i < marcas.size(); i++) {
+            marcaNames[i] = marcas.get(i).getNombre();
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Selecciona los tipos de marcas")
+                .setMultiChoiceItems(marcaNames, selectedMarcas, new DialogInterface.OnMultiChoiceClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which, boolean isChecked) {
+                        selectedMarcas[which] = isChecked;
+                    }
+                })
+                .setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        // Implementa la lógica después de seleccionar las marcas y hacer clic en Aceptar
+                        // Puedes recorrer selectedMarcas para obtener las marcas seleccionados
+                        selectedProductMarcas.clear(); // Limpiar la lista de marcas seleccionados antes de agregar los nuevos
+                        for (int i = 0; i < selectedMarcas.length; i++) {
+                            if (selectedMarcas[i]) {
+                                selectedProductMarcas.add(marcas.get(i));
+                            }
+                        }
+                        // Actualiza la interfaz de usuario si es necesario
+                    }
+                })
+                .setNegativeButton("Cancelar", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        // Acción al hacer clic en Cancelar, si es necesario
+                    }
+                });
+        AlertDialog dialog = builder.create();
+        dialog.show();
+
+    }
+
+    //Modelos
+    private void fetchProductModelos() {
+        Call<List<ModeloDTO>> call = apiService.getModelos();
+        call.enqueue(new Callback<List<ModeloDTO>>() {
+            @Override
+            public void onResponse(Call<List<ModeloDTO>> call, Response<List<ModeloDTO>> response) {
+                if (response.isSuccessful()) {
+                    List<ModeloDTO> modeloDtoList = response.body();
+                    modeloDtoList.forEach(modeloDto -> {
+                        Modelo newModelo =modeloDto.toModelo();
+                        modelos.add(newModelo);});
+
+                    selectedModelos = new boolean[modelos.size()];
+                } else {
+                    Toast.makeText(CrearProductoActivity.this, "Failed to fetch product modelos", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<List<ModeloDTO>> call, Throwable t) {
+                Toast.makeText(CrearProductoActivity.this, "Failed to fetch product modelos", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void showMultiSelectDialogModelos() {
+
+        String[] modeloNames = new String[modelos.size()];
+        for (int i = 0; i < modelos.size(); i++) {
+            modeloNames[i] = modelos.get(i).getNombre();
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Selecciona los modelos de autos")
+                .setMultiChoiceItems(modeloNames, selectedModelos, new DialogInterface.OnMultiChoiceClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which, boolean isChecked) {
+                        selectedModelos[which] = isChecked;
+                    }
+                })
+                .setPositiveButton("Aceptar", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        // Implementa la lógica después de seleccionar los modelos y hacer clic en Aceptar
+                        // Puedes recorrer selectedModelos para obtener los modelos seleccionados
+                        selectedProductModelos.clear(); // Limpiar la lista de modelos seleccionados antes de agregar los nuevos
+                        for (int i = 0; i < selectedModelos.length; i++) {
+                            if (selectedModelos[i]) {
+                                selectedProductModelos.add(modelos.get(i));
                             }
                         }
                         // Actualiza la interfaz de usuario si es necesario

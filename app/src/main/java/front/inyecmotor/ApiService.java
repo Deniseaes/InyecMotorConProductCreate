@@ -22,6 +22,12 @@ public interface ApiService {
     Call<List<TipoDTO>> getTipos(); // Define el nuevo endpoint para obtener las tipos
 
     @GET("/proveedor/all")
-    Call<List<ProveedorDTO>> getProveedores(); // Define el nuevo endpoint para obtener las tipos
+    Call<List<ProveedorDTO>> getProveedores(); // Define el nuevo endpoint para obtener las proveedores
+
+    @GET("/marca/all")
+    Call<List<MarcaDTO>> getMarcas(); // Define el nuevo endpoint para obtener las marcas
+
+    @GET("/modelo/all")
+    Call<List<ModeloDTO>> getModelos(); // Define el nuevo endpoint para obtener los modelos
 }
 
